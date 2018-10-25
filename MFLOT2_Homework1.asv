@@ -1,4 +1,5 @@
 close all;
+clc on;
 %Donnée:
 b = 50e-3; % largeur de la conduite [m]
 d_e = 15e-3; % hauteur de la sortie de la conduite [m]
@@ -13,6 +14,9 @@ r1 = 254.3e-3; % rayon de courbure de la gorge [m]
 r2 = 153.7e-3; % rayon de courbure fin de divergente [m]
 X = linspace(0,0.39,10000);
 H = zeros(1,10000);
+
+%%%%% Modelisation Geometry nozzle %%%%%
+
 X_p1 = L_c + r1/( sqrt( 1/(tan(alpha))^2 -1 ) );
 
 X_p2 = L_c + L_d - r2/( sqrt( 1/(tan(alpha))^2 +1 ) );
@@ -21,23 +25,33 @@ for i=1:length(X)
     if X(i)<=X_p1
         H(i) = h_t + r1 - sqrt( (r1)^2 - (X(i) - L_c)^2 );
     elseif X(i)<=X_p2 && X(i)>X_p1
-        H(i) = tan(alpha)*X(i) + ;
+        H(i) = 0.05748375*X(i) + 0.85568e-3;
     elseif X(i)<=0.12 && X(i)>X_p2
         H(i) = h_e - r2 + sqrt( (r2)^2 - (X(i) -L_c -L_d)^2);
     else
         H(i) = h_e;
     end
 end
-
+% plot nozzle
 figure
-plot(X,H,'.')
+plot(X,H)
 grid on
 xlim([0 0.12])
-ylim([0 7.5e-3])
-line([X_p2 X_p2],[3e-3 7.5e-3])
-line([X_p1 X_p1],[3e-3 7.5e-3])
+ylim([0 8e-3])
+%line([X_p2 X_p2],[3e-3 7.5e-3])
+%line([X_p1 X_p1],[3e-3 7.5e-3])
 
-hold on 
-%viscircles([L_c h_t+r1],r1)
-%viscircles([L_c+L_d h_e-r2],r2)
+%%%%% Calcul %%%%%
+
+%Données 
+T0 = 300; % [K]
+pa = 1.01325; % [bar]
+At = 3e-3 * b; % [m^2]
+Ae = b * h_e; %[m^2]
+Mt = 1;
+S = 111; %[K]
+Tref = 273.15; %[K]
+muref = 1.716e-5; %[Ns/m^2]
+R = 287.1;
+gamma = 1.4;
 

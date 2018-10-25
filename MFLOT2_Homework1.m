@@ -14,6 +14,9 @@ r1 = 254.3e-3; % rayon de courbure de la gorge [m]
 r2 = 153.7e-3; % rayon de courbure fin de divergente [m]
 X = linspace(0,0.39,10000);
 H = zeros(1,10000);
+
+%%%%% Modelisation Geometry nozzle %%%%%
+
 X_p1 = L_c + r1/( sqrt( 1/(tan(alpha))^2 -1 ) );
 
 X_p2 = L_c + L_d - r2/( sqrt( 1/(tan(alpha))^2 +1 ) );
@@ -29,7 +32,7 @@ for i=1:length(X)
         H(i) = h_e;
     end
 end
-
+% plot nozzle
 figure
 plot(X,H)
 grid on
@@ -38,4 +41,18 @@ ylim([0 8e-3])
 %line([X_p2 X_p2],[3e-3 7.5e-3])
 %line([X_p1 X_p1],[3e-3 7.5e-3])
 
+%%%%% Calcul %%%%%
+
+%Données 
+T0 = 300; % [K]
+pa = 1.01325; % [bar]
+At = 3e-3 * b; % [m^2]
+Ae = b * h_e; %[m^2]
+Mt = 1;
+S = 111; %[K]
+Tref = 273.15; %[K]
+muref = 1.716e-5; %[Ns/m^2]
+R = 287.1;
+gamma = 1.4;
+ 
 
