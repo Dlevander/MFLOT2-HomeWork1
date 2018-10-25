@@ -1,5 +1,4 @@
 close all;
-clc on;
 %Donnée:
 b = 50e-3; % largeur de la conduite [m]
 d_e = 15e-3; % hauteur de la sortie de la conduite [m]
@@ -22,7 +21,7 @@ for i=1:length(X)
     if X(i)<=X_p1
         H(i) = h_t + r1 - sqrt( (r1)^2 - (X(i) - L_c)^2 );
     elseif X(i)<=X_p2 && X(i)>X_p1
-        H(i) = 0.05748375*X(i) + 0.85568e-3;
+        H(i) = tan(alpha)*X(i) + ;
     elseif X(i)<=0.12 && X(i)>X_p2
         H(i) = h_e - r2 + sqrt( (r2)^2 - (X(i) -L_c -L_d)^2);
     else
@@ -31,11 +30,14 @@ for i=1:length(X)
 end
 
 figure
-plot(X,H)
+plot(X,H,'.')
 grid on
 xlim([0 0.12])
-ylim([0 8e-3])
-%line([X_p2 X_p2],[3e-3 7.5e-3])
-%line([X_p1 X_p1],[3e-3 7.5e-3])
+ylim([0 7.5e-3])
+line([X_p2 X_p2],[3e-3 7.5e-3])
+line([X_p1 X_p1],[3e-3 7.5e-3])
 
+hold on 
+%viscircles([L_c h_t+r1],r1)
+%viscircles([L_c+L_d h_e-r2],r2)
 
