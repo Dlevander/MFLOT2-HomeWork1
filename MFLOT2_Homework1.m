@@ -104,26 +104,53 @@ end
 
 %% Canal a section constante %%
 
-Me = 1; % GROSSE HYPOTHESE DE DEPART
+pe = pa; % hypothese
 
-pe = pa;
-lambda1 = (fanno(Mi) - fanno(Me))*2*d_e/(0.27);
-Te = T0/(1 + Me^2 * (gamma-1)/2);
-ce
-
-% Temperature
+% Temperature a l'entree
 Tx(1,1200) = T0 / (1 + Mx(1,1200)^2 *(gamma - 1)/2 );
 Tx(2,1200) = T0 / (1 + Mx(2,1200)^2 *(gamma - 1)/2 );
 Tx(3,1200) = T0 / (1 + Mx(3,1200)^2 *(gamma - 1)/2 );
 
-% Vitesse
-C = sqrt(gamma * R .* Tx);
-Ustar = C;
-Ux = Mx .* sqrt(Tx./Tstar) .*Ustar;
+for i=1:3
+    % Initialisation des lambdas
+    lambda1 = 0.02;
+    lambda2 = 0.05;
 
-% Rho
-Rho0 = p0./(R*T0);
-Rhox = Rho0 .* ((T0./Tx).^(-1./(gamma-1)));
+    while ( abs(lambda1 - lambda2) > 1e-6 )
+
+        Me = fsolve(@(x) flambda1(x,Mx(i,1200)),0.5);
+        Te = T0/(1 + Me^2 * (gamma-1)/2);
+        ce = sqrt(gamma*R*Te);
+        Ue = Me*ce;
+        rhoe = pe/(R*Te);
+
+        mu = muref * (Te/Tref)^(3/2) * (Tref + S)/(Te+S);
+        ReD = rhoe*Ue*d_e/mu;
+
+        lambda2 = fsolve(@(x) flambda2(x),0.03);
+
+        lambda1 = lambda2;
+    end
+    p0e = pe * (T0/Te)^(gamma/(gamma-1));
+    
+    Mx(i,3900) = Me;
+    Tx(i,3900) = Te;
+    Rhox(i,3900) = rhoe;
+    p(i,3900) = pe;
+    p0(i,3900) = p0e;
+    Ux(i,3900) = Ue;
+end
+
+
+% 
+% % Vitesse
+% C = sqrt(gamma * R .* Tx);
+% Ustar = C;
+% Ux = Mx .* sqrt(Tx./Tstar) .*Ustar;
+% 
+% % Rho
+% Rho0 = p0./(R*T0);
+% Rhox = Rho0 .* ((T0./Tx).^(-1./(gamma-1)));
 
 % figure;
 % title('Rho(x)');
@@ -152,25 +179,15 @@ Rhox = Rho0 .* ((T0./Tx).^(-1./(gamma-1)));
 % plot(X,Tx(3,:),'b');
 % hold off
 
-%Red = rho*u*d_e/mu
-%mu = muref .* (Tx./Tref)^(3/2) .* (Tref + S)/(Tx+S);
 
-function [f] = fanno(M)
+function f = fanno(M) % Fonction f(M)
     f = (1/gamma*((1-M^2)/(M^2) + (gamma+1)/2 * log(((gamma+1)*M^2/2) / (1 + M^2 * (gamma-1)/2))));
 end
-
-function [lambda] = iterativeFriction(lambda_init , Re_d)
-    x = lambda_init;
-    f = @(lambda)(-3.0*log10(2.03*lambda/Re_d))
-    epsilon = 1; % difference entre f(i+1) et f(i)
-    
-    while (epsilon > 0.001) % Precision 1e-3
-        y = f(x)
-        epsilon = abs(y - x)
-        x = y
-    end
-    
-    lambda = x;
+function f = flambda1(x,Mi) % Chercher le lambda en fonction de f(Me)
+    f = lambda1/2 * L/d_e - fanno(Mi) + fanno(x);
+end
+function f = flambda2(x) % Colebrooke
+    f = 1/sqrt(x) + 3*log10(2.03/ReD*(1/sqrt(x)));
 end
 
 function [Mx] = iterativeMachNumber(M_init , At , Ax , mode)
@@ -183,7 +200,6 @@ function [Mx] = iterativeMachNumber(M_init , At , Ax , mode)
     if strcmp(mode,'subsonic')
         f = @(M)( At/Ax *( ((gamma+1)/2) / (1 + (gamma-1)/2 * M^2) )^((-gamma+1)/(2*gamma - 2)) );
     elseif strcmp(mode,'supersonic')
-        %f = @(M)( sqrt( (2/(gamma-1)) * ( ((gamma+1)/2) * (At/(Ax*M))^((-2*gamma+2)/(gamma+1)) - 1) ) );       
         f = @(M)( sqrt( ( ((gamma+1)/2) * (At/(M*Ax))^(-2*(gamma-1)/(gamma+1)) - 1 ) * 2/(gamma-1) ) );
     else
         error('ERROR : wrong parameter "mode" given to the function');
