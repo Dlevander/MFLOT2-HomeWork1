@@ -1,14 +1,14 @@
 close all;
 clc;
 %Donnee:
-b = 50e-3; % largeur de la conduite [m]
-d_e = 15e-3; % hauteur de la sortie de la conduite [m]
+b = 50e-3; % largeur du canal [m]
+d_e = 15e-3; % hauteur de la sortie du canal [m]
 h_e = 0.5*d_e; % [m]
 d_t = 6e-3; % hauteur de la gorge [m]
 h_t = 0.5*d_t; % [m]
 L_c = 30e-3; % longueur partie convergente [m]
 L_d = 90e-3; % longueur partie divergente [m]
-L = 270e-3; % longueur conduite [m]
+L = 270e-3; % longueur du canal [m]
 alpha = 3.25*pi/180; % angle de pente divergente [rad]
 r1 = 254.3e-3; % rayon de courbure de la gorge [m] 
 r2 = 153.7e-3; % rayon de courbure fin de divergente [m]
@@ -17,6 +17,9 @@ H = zeros(1,3900);
 Mx = zeros(3,3900);
 p = zeros(3,3900);
 p0 = zeros(3,3900);
+Tx = zeros(3,3900);
+Ux = zeros(3,3900);
+Rhox = zeros(3,3900);
 
 %%%%% Modelisation Geometry nozzle %%%%%
 
@@ -35,15 +38,16 @@ for i=1:length(X)
         H(i) = h_e;
     end
 end
+
 % plot nozzle
-figure
-%subplot(3,1,1);
+figure;
+title('Geometry');
 plot(X,H)
 grid on
-xlim([0 0.12])
+%xlim([0 0.12])
 ylim([0 8e-3])
 
-%% Calcul %%
+%%% Calcul %%
 
 %Donnees 
 T0 = 300; % [K]
@@ -57,29 +61,22 @@ R = 287.1;
 gamma = 1.4;
 Ax = 2*H*b; % Vecteur des aires
 
-%cas sonic a gorge et subsonic apres
-pe = pa;
-Me = iterativeMachNumber(0.5,At,Ae,'subsonic');
-p00(1) = pe * (1+ Me^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
 
+%cas sonic a gorge et subsonic apres
+Me = iterativeMachNumber(0.5,At,Ae,'subsonic');
 for i=1:length(Ax)
     Mx(1,i) = iterativeMachNumber(0.5,At,Ax(i),'subsonic');
 end
-p0(1,:) = p00(1)*ones(1,3900);
+
+%p00(1) = pe * (1+ Me^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
+%p0(1,:) = p00(1)*ones(1,3900);
     
 
 %cas supersonic a la divergence et shock a x=0.07
 Ash = 2*H(700)*b;
 Ms1 = iterativeMachNumber(1.5,At,Ash,'supersonic');
 Ms2 = sqrt( (1+ Ms1^(2) *(gamma-1)/2 )/(gamma * Ms1^(2) - (gamma-1)/2 ) );
-pe = pa;
 A2star = Ash*Ms2*(((gamma+1)/2) / (1 + Ms2^2 * (gamma-1)/2))^((gamma+1)/(2*gamma-2));
-Me = iterativeMachNumber(0.5,A2star,Ae,'subsonic');
-p02 = pe * (1+ Me^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
-p01 = p02 / ((((gamma+1)/2) / (gamma*Ms1^2 - (gamma-1)/2))^(1/(gamma-1)) * ...
-    ((((gamma+1)/2)*Ms1^2) / (1 + (gamma-1)/2*Ms1^2))^(gamma/(gamma-1)));
-p00(2) = p01;
-
 for i=1:length(Ax)
     if i<300
         Mx(2,i) = iterativeMachNumber(0.5,At,Ax(i),'subsonic');
@@ -91,51 +88,103 @@ for i=1:length(Ax)
         Mx(2,i) = iterativeMachNumber(0.5,A2star,Ax(i),'subsonic');
     end
 end
+%p0(2,:) = [p01*ones(1,700) p02*ones(1,3200)];
+%pe = pa;
+%p02 = pe * (1+ Me^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
+%p01 = p02 / ((((gamma+1)/2) / (gamma*Ms1^2 - (gamma-1)/2))^(1/(gamma-1)) * ...
+%    ((((gamma+1)/2)*Ms1^2) / (1 + (gamma-1)/2*Ms1^2))^(gamma/(gamma-1)));
+%p00(2) = p01;
 
-p0(2,:) = [p01*ones(1,700) p02*ones(1,3200)];
 
-%cas sonic a gorge et supersonic partout avec shock a la sortie
-% pe < pa
+
+%%% Cas sonic a gorge et supersonic partout avec shock a la sortie
 % Ash = Ae
 Ms1 = iterativeMachNumber(1.5,At,Ae,'supersonic');
 Ms2 = sqrt( (1+ Ms1^(2) *(gamma-1)/2 )/(gamma * Ms1^(2) - (gamma-1)/2 ) );
-ps2 = pa;
-p02 = ps2 * (1+ Ms2^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
-p01 = p02 / ((((gamma+1)/2) / (gamma*Ms1^2 - (gamma-1)/2))^(1/(gamma-1)) * ...
-    ((((gamma+1)/2)*Ms1^2) / (1 + (gamma-1)/2*Ms1^2))^(gamma/(gamma-1)));
-p00(3) = p01;
+A2star = Ash*Ms2*(((gamma+1)/2) / (1 + Ms2^2 * (gamma-1)/2))^((gamma+1)/(2*gamma-2));
+% ps2 = pa;
+% p02 = ps2 * (1+ Ms2^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
+% p01 = p02 / ((((gamma+1)/2) / (gamma*Ms1^2 - (gamma-1)/2))^(1/(gamma-1)) * ...
+%     ((((gamma+1)/2)*Ms1^2) / (1 + (gamma-1)/2*Ms1^2))^(gamma/(gamma-1)));
+% p00(3) = p01;
 
 for i=1:length(Ax)
     if i<300
         Mx(3,i) = iterativeMachNumber(0.5,At,Ax(i),'subsonic');
     elseif i == 300
         Mx(3,i) = 1;
-    elseif i > 300
+    elseif i > 300 && i < 1200
         Mx(3,i) = iterativeMachNumber(1.5,At,Ax(i),'supersonic');
+    elseif i == 1200
+        Mx(3,i) = Ms2;
     end
 end
-p0(3,:) = [p01*ones(1,1200) p02*ones(1,2700)];
 
-p = p0 ./(1+ Mx.^(2) *(gamma-1)/2 ).^(gamma/(gamma-1));
 figure;
-plot(X,p(1,:)./p0(1,:),X,p(2,:)./p0(2,:),X,p(3,:)./p0(3,:));
+title('M(x)');
+grid on
+hold on 
+plot(X,Mx(1,:),'r');
+plot(X,Mx(2,:),'g');
+plot(X,Mx(3,:),'b');
+hold off
+
+% p0(3,:) = [p01*ones(1,1200) p02*ones(1,2700)];
+% p = p0 ./(1+ Mx.^(2) *(gamma-1)/2 ).^(gamma/(gamma-1));
+
+% figure;
+% title('p(x)/p0');
+% grid on
+% hold on 
+% plot(X,p(1,:)./p0(1,:),'r');
+% plot(X,p(2,:)./p0(2,:),'g');
+% plot(X,p(3,:)./p0(3,:),'b');
+% hold off
 
 % Qm
-Qm = (2/(gamma+1))^((gamma+1)/(2*gamma-2)) * sqrt(gamma/R) * At * p00/sqrt(T0)
+% Qm = (2/(gamma+1))^((gamma+1)/(2*gamma-2)) * sqrt(gamma/R) * At * p00/sqrt(T0);
 
-%subplot(3,1,2);
-figure
-plot(X,Mx(1,:),'r');
+
+%%%% Canal a section constante %%%%
+
+% Temperature
+Tx(1,1200) = T0 / (1 + Mx(1,1200)^2 *(gamma - 1)/2 );
+Tx(2,1200) = T0 / (1 + Mx(2,1200)^2 *(gamma - 1)/2 );
+Tx(3,1200) = T0 / (1 + Mx(3,1200)^2 *(gamma - 1)/2 );
+
+figure;
+title('T(x)');
 grid on
-
 hold on 
-plot(X,Mx(2,:),'g');
+plot(X,Tx(1,:),'r');
+plot(X,Tx(2,:),'g');
+plot(X,Tx(3,:),'b');
+hold off
 
+% Vitesse
+C = sqrt(gamma * R .* Tx);
+Ustar = C;
+Ux = Mx .* sqrt(Tx./Tstar) .*Ustar;
+
+% Rho
+Rho0 = p0./(R*T0);
+Rhox = Rho0 .* ((T0./Tx).^(-1./(gamma-1)));
+
+figure;
+title('Rho(x)');
+grid on
 hold on 
-plot(X,Mx(3,:),'b');
-%xlim([0 0.12])
+plot(X,Rhox(1,:),'r');
+plot(X,Rhox(2,:),'g');
+plot(X,Rhox(3,:),'b');
+hold off
 
+%Red = rho*u*d_e/mu
+%mu = muref .* (Tx./Tref)^(3/2) .* (Tref + S)/(Tx+S);
 
+function [f] = fanno(M)
+
+end
 
 function [lambda] = iterativeFriction(lambda_init , Re_d)
     x = lambda_init;
