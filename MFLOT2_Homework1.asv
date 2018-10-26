@@ -12,6 +12,17 @@ L = 270e-3; % longueur du canal [m]
 alpha = 3.25*pi/180; % angle de pente divergente [rad]
 r1 = 254.3e-3; % rayon de courbure de la gorge [m] 
 r2 = 153.7e-3; % rayon de courbure fin de divergente [m]
+T0 = 300; % [K]
+pa = 1.01325; % [bar]
+At = d_t * b; % [m^2]
+Ae = b * d_e; %[m^2]
+S = 111; %[K]
+Tref = 273.15; %[K]
+muref = 1.716e-5; %[Ns/m^2]
+R = 287.1;
+gamma = 1.4;
+Ax = 2*H*b; % Vecteur des aires
+
 X = linspace(0,0.39,3900);
 H = zeros(1,3900);
 Mx = zeros(3,3900);
@@ -20,6 +31,7 @@ p0 = zeros(3,3900);
 Tx = zeros(3,3900);
 Ux = zeros(3,3900);
 Rhox = zeros(3,3900);
+
 
 %%%%% Modelisation Geometry nozzle %%%%%
 
@@ -47,30 +59,13 @@ grid on
 %xlim([0 0.12])
 ylim([0 8e-3])
 
-%%% Calcul %%
-
-%Donnees 
-T0 = 300; % [K]
-pa = 1.01325; % [bar]
-At = d_t * b; % [m^2]
-Ae = b * d_e; %[m^2]
-S = 111; %[K]
-Tref = 273.15; %[K]
-muref = 1.716e-5; %[Ns/m^2]
-R = 287.1;
-gamma = 1.4;
-Ax = 2*H*b; % Vecteur des aires
-
+%% Calcul %%
 
 %cas sonic a gorge et subsonic apres
 Me = iterativeMachNumber(0.5,At,Ae,'subsonic');
 for i=1:length(Ax)
     Mx(1,i) = iterativeMachNumber(0.5,At,Ax(i),'subsonic');
 end
-
-%p00(1) = pe * (1+ Me^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
-%p0(1,:) = p00(1)*ones(1,3900);
-    
 
 %cas supersonic a la divergence et shock a x=0.07
 Ash = 2*H(700)*b;
@@ -88,25 +83,12 @@ for i=1:length(Ax)
         Mx(2,i) = iterativeMachNumber(0.5,A2star,Ax(i),'subsonic');
     end
 end
-%p0(2,:) = [p01*ones(1,700) p02*ones(1,3200)];
-%pe = pa;
-%p02 = pe * (1+ Me^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
-%p01 = p02 / ((((gamma+1)/2) / (gamma*Ms1^2 - (gamma-1)/2))^(1/(gamma-1)) * ...
-%    ((((gamma+1)/2)*Ms1^2) / (1 + (gamma-1)/2*Ms1^2))^(gamma/(gamma-1)));
-%p00(2) = p01;
-
-
 
 %%% Cas sonic a gorge et supersonic partout avec shock a la sortie
 % Ash = Ae
 Ms1 = iterativeMachNumber(1.5,At,Ae,'supersonic');
 Ms2 = sqrt( (1+ Ms1^(2) *(gamma-1)/2 )/(gamma * Ms1^(2) - (gamma-1)/2 ) );
 A2star = Ash*Ms2*(((gamma+1)/2) / (1 + Ms2^2 * (gamma-1)/2))^((gamma+1)/(2*gamma-2));
-% ps2 = pa;
-% p02 = ps2 * (1+ Ms2^(2) *(gamma-1)/2 )^(gamma/(gamma-1));
-% p01 = p02 / ((((gamma+1)/2) / (gamma*Ms1^2 - (gamma-1)/2))^(1/(gamma-1)) * ...
-%     ((((gamma+1)/2)*Ms1^2) / (1 + (gamma-1)/2*Ms1^2))^(gamma/(gamma-1)));
-% p00(3) = p01;
 
 for i=1:length(Ax)
     if i<300
@@ -120,46 +102,19 @@ for i=1:length(Ax)
     end
 end
 
-figure;
-title('M(x)');
-grid on
-hold on 
-plot(X,Mx(1,:),'r');
-plot(X,Mx(2,:),'g');
-plot(X,Mx(3,:),'b');
-hold off
+%% Canal a section constante %%
 
-% p0(3,:) = [p01*ones(1,1200) p02*ones(1,2700)];
-% p = p0 ./(1+ Mx.^(2) *(gamma-1)/2 ).^(gamma/(gamma-1));
+Me = 1; % GROSSE HYPOTHESE DE DEPART
 
-% figure;
-% title('p(x)/p0');
-% grid on
-% hold on 
-% plot(X,p(1,:)./p0(1,:),'r');
-% plot(X,p(2,:)./p0(2,:),'g');
-% plot(X,p(3,:)./p0(3,:),'b');
-% hold off
-
-% Qm
-% Qm = (2/(gamma+1))^((gamma+1)/(2*gamma-2)) * sqrt(gamma/R) * At * p00/sqrt(T0);
-
-
-%%%% Canal a section constante %%%%
+pe = pa;
+lambda1 = (fanno(Mi) - fanno(Me))*2*d_e/(0.27);
+Te = T0/(1 + Me^2 * (gamma-1)/2);
+ce
 
 % Temperature
 Tx(1,1200) = T0 / (1 + Mx(1,1200)^2 *(gamma - 1)/2 );
 Tx(2,1200) = T0 / (1 + Mx(2,1200)^2 *(gamma - 1)/2 );
 Tx(3,1200) = T0 / (1 + Mx(3,1200)^2 *(gamma - 1)/2 );
-
-figure;
-title('T(x)');
-grid on
-hold on 
-plot(X,Tx(1,:),'r');
-plot(X,Tx(2,:),'g');
-plot(X,Tx(3,:),'b');
-hold off
 
 % Vitesse
 C = sqrt(gamma * R .* Tx);
@@ -170,20 +125,38 @@ Ux = Mx .* sqrt(Tx./Tstar) .*Ustar;
 Rho0 = p0./(R*T0);
 Rhox = Rho0 .* ((T0./Tx).^(-1./(gamma-1)));
 
-figure;
-title('Rho(x)');
-grid on
-hold on 
-plot(X,Rhox(1,:),'r');
-plot(X,Rhox(2,:),'g');
-plot(X,Rhox(3,:),'b');
-hold off
+% figure;
+% title('Rho(x)');
+% grid on
+% hold on 
+% plot(X,Rhox(1,:),'r');
+% plot(X,Rhox(2,:),'g');
+% plot(X,Rhox(3,:),'b');
+% hold off
+% 
+% figure;
+% title('M(x)');
+% grid on
+% hold on 
+% plot(X,Mx(1,:),'r');
+% plot(X,Mx(2,:),'g');
+% plot(X,Mx(3,:),'b');
+% hold off
+% 
+% figure;
+% title('T(x)');
+% grid on
+% hold on 
+% plot(X,Tx(1,:),'r');
+% plot(X,Tx(2,:),'g');
+% plot(X,Tx(3,:),'b');
+% hold off
 
 %Red = rho*u*d_e/mu
 %mu = muref .* (Tx./Tref)^(3/2) .* (Tref + S)/(Tx+S);
 
 function [f] = fanno(M)
-
+    f = (1/gamma*((1-M^2)/(M^2) + (gamma+1)/2 * log(((gamma+1)*M^2/2) / (1 + M^2 * (gamma-1)/2))));
 end
 
 function [lambda] = iterativeFriction(lambda_init , Re_d)
