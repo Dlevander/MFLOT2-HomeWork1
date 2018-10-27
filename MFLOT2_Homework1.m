@@ -53,11 +53,11 @@ end
 
 % plot nozzle
 figure;
-title('Geometry');
-plot(X,H)
-grid on
-%xlim([0 0.12])
-ylim([0 8e-3])
+% title('Geometry');
+% plot(X,H)
+% grid on
+% %xlim([0 0.12])
+% ylim([0 8e-3])
 
 %% Calcul %%
 
@@ -107,19 +107,21 @@ end
 pe = pa; % hypothese
 
 % Temperature a l'entree
-Tx(1,1200) = T0 / (1 + Mx(1,1200)^2 *(gamma - 1)/2 );
-Tx(2,1200) = T0 / (1 + Mx(2,1200)^2 *(gamma - 1)/2 );
-Tx(3,1200) = T0 / (1 + Mx(3,1200)^2 *(gamma - 1)/2 );
+Tx(:,1200) = T0 ./ (1 + Mx(:,1200).^(2) *(gamma - 1)/2 );
+% Temperature sonic dans le canal 
+Tstar = Tx(:,1200) .* (1 + Mx(:,1200).^2 .*(gamma - 1)./2 ) ./ ((gamma + 1)./2);
 
 for i=1:3
     % Initialisation des lambdas
     lambda1 = 0.02;
-    lambda2 = 0.05;
+    lambda2 = 0.03;
 
     while ( abs(lambda1 - lambda2) > 1e-6 )
+        lambda1 = lambda2; % il etait a la fin de la boucle, pas de sens
 
-        Me = fsolve(@(x) flambda1(x,Mx(i,1200)),0.5);
-        Te = T0/(1 + Me^2 * (gamma-1)/2);
+        Me = fsolve(@(Me) flambda1(Me,Mx(i,1200),lambda1),0.5) % supposition Me < 1
+        % Te = T0/(1 + Me^2 * (gamma-1)/2); % canal non isentropique , c'est pas valable non ?
+        Te = Tstar(i) * ((gamma + 1)/2)/(1 + Me^2 *(gamma - 1)/2 );
         ce = sqrt(gamma*R*Te);
         Ue = Me*ce;
         rhoe = pe/(R*Te);
@@ -127,9 +129,8 @@ for i=1:3
         mu = muref * (Te/Tref)^(3/2) * (Tref + S)/(Te+S);
         ReD = rhoe*Ue*d_e/mu;
 
-        lambda2 = fsolve(@(x) flambda2(x),0.03);
+        lambda2 = fsolve(@(x) flambda2(x,ReD),0.03);
 
-        lambda1 = lambda2;
     end
     p0e = pe * (T0/Te)^(gamma/(gamma-1));
     
@@ -141,6 +142,7 @@ for i=1:3
     Ux(i,3900) = Ue;
 end
 
+Qm = Rhox(:,3900) .* Ux(:,3900) .* Ae;
 
 % 
 % % Vitesse
@@ -181,13 +183,16 @@ end
 
 
 function f = fanno(M) % Fonction f(M)
+    gamma = 1.4;
     f = (1/gamma*((1-M^2)/(M^2) + (gamma+1)/2 * log(((gamma+1)*M^2/2) / (1 + M^2 * (gamma-1)/2))));
 end
-function f = flambda1(x,Mi) % Chercher le lambda en fonction de f(Me)
-    f = lambda1/2 * L/d_e - fanno(Mi) + fanno(x);
+function f = flambda1(Me,Mi,lambda1) % Chercher le lambda en fonction de f(Me)
+    L = 270e-3;
+    d_e = 15e-3;
+    f = lambda1/2 * L/d_e - fanno(Mi) + fanno(Me);
 end
-function f = flambda2(x) % Colebrooke
-    f = 1/sqrt(x) + 3*log10(2.03/ReD*(1/sqrt(x)));
+function Lambda_Col = flambda2(lambda,ReD) % Colebrooke
+    Lambda_Col = 1/sqrt(lambda) + 3*log10(2.03/ReD*(1/sqrt(lambda)));
 end
 
 function [Mx] = iterativeMachNumber(M_init , At , Ax , mode)
