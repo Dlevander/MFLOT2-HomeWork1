@@ -1,6 +1,10 @@
 close all;
 clc;
-clear all;
+% LMECA2322 Compressible Flows
+% Homework : Nozzle and Fanno flows
+% Groupe P
+% Dennis Levander
+% Louis Fichefet
 tic
 %Donnee:
 
@@ -24,6 +28,7 @@ Tref = 273.15; %[K]
 muref = 1.716e-5; %[Ns/m^2]
 R = 287.1;
 gamma = 1.4;
+
 %Preallocation
 X = linspace(0,0.39,3900);
 H = zeros(1,3900);
@@ -44,19 +49,18 @@ Ue = zeros(3,1);
 
 X_p1 = L_c + r1/( sqrt( 1/(tan(alpha))^2 -1 ) );
 X_p2 = L_c + L_d - r2/( sqrt( 1/(tan(alpha))^2 +1 ) );
-for i=1:length(X)
+for i=1:1200
     if X(i)<=X_p1
         H(i) = h_t + r1 - sqrt( (r1)^2 - (X(i) - L_c)^2 );
     elseif X(i)<=X_p2 && X(i)>X_p1
         H(i) = 0.05748375*X(i) + 0.85568e-3;
     elseif X(i)<=0.12 && X(i)>X_p2
         H(i) = h_e - r2 + sqrt( (r2)^2 - (X(i) -L_c -L_d)^2);
-    else
-        H(i) = h_e;
     end
 end
-
+H(1201:3900) = h_e;
 Ax = 2*H*b; % Vecteur des aires
+
 %% Calcul %%
 
 %cas sonic a gorge et subsonic apres
@@ -69,11 +73,10 @@ Ash = 2*H(700)*b;
 Ms1 = iterativeMachNumber(1.5,At,Ash,'supersonic');
 Ms2 = sqrt( (1+ Ms1^(2) *(gamma-1)/2 )/(gamma * Ms1^(2) - (gamma-1)/2 ) );
 A2star = Ash*Ms2*(((gamma+1)/2) / (1 + Ms2^2 * (gamma-1)/2))^((gamma+1)/(2*gamma-2));
+Mx(2,300) = 1;
 for i=1:1200
     if i<300
         Mx(2,i) = iterativeMachNumber(0.5,At,Ax(i),'subsonic');
-    elseif i == 300
-        Mx(2,i) = 1;
     elseif i > 300 && i < 700
         Mx(2,i) = iterativeMachNumber(1.1,At,Ax(i),'supersonic');
     elseif i >= 700
@@ -175,7 +178,7 @@ p0x(3,1:1199) = p0x(3,1199)* ones(1,1199);
 px(:,1:1200) = p0x(:,1:1200) ./ ((1 + (gamma-1)/2 .* Mx(:,1:1200).^2).^(gamma/(gamma-1)));
 Tx(:,1:1200) = T0 ./ (1 + (gamma-1)/2 .* Mx(:,1:1200).^2);
 Rho0 = p0x(:,1)./ (R*T0);
-Rhox(:,1:1199) = Rho0 ./((T0./Tx(:,1:1199)).^(1/(gamma-1)));
+Rhox(:,1:1199) = px(:,1:1199)./ (R.*Tx(:,1:1199));
 Ux(:,1:1200) = Mx(:,1:1200) .* sqrt(gamma.*R.*Tx(:,1:1200));
 p0x = p0x/101325;
 px = px/101325;
